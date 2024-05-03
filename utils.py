@@ -30,6 +30,8 @@ from xgboost import XGBClassifier
 import lightgbm as lgb
 import pandas as pd
 import numpy as np
+from collections import Counter
+from itertools import groupby
 
 def run_ML(X, y, data_set, approach="Default"):
     # X is numpy as
@@ -51,6 +53,7 @@ def run_ML(X, y, data_set, approach="Default"):
             X_test = X[test_idx]
             y_train = y[train_idx]
             y_test = y[test_idx]
+            print("Train freq: ", [len(list(group)) for key, group in groupby(sorted(y_train))])
             
             # if i <= 0 and fold <= 0:
             #     print("n_samples: ", n_samples)
@@ -58,12 +61,12 @@ def run_ML(X, y, data_set, approach="Default"):
             # print(test_idx[:10])
 
             # SVM
-            methods.append('SVM')
-            print(methods[-1], end =', ')
-            clf = svm.SVC(kernel='linear', C=1).fit(X_train, y_train)
-            y_predict = clf.predict(X_test)
-            np.savetxt(path_dir + "_SVM_labels.csv", y_predict, delimiter=",")
-            score.append(f1_score(y_predict, y_test, average='macro'))
+            # methods.append('SVM')
+            # print(methods[-1], end =', ')
+            # clf = svm.SVC(kernel='linear', C=1).fit(X_train, y_train)
+            # y_predict = clf.predict(X_test)
+            # np.savetxt(path_dir + "_SVM_labels.csv", y_predict, delimiter=",")
+            # score.append(f1_score(y_predict, y_test, average='macro'))
 
 #             # Decision Tree
 #             methods.append('Decision Tree')
@@ -97,23 +100,23 @@ def run_ML(X, y, data_set, approach="Default"):
 #             np.savetxt(path_dir + "_Adaboost_labels.csv", y_predict, delimiter=",")
 #             score.append(f1_score(y_predict, y_test, average='macro'))
 
-#             ## K-NN 
-#             methods.append('kNN')
-#             print(methods[-1], end =', ')
-#             clf = KNeighborsClassifier(n_neighbors=10).fit(X_train, y_train)
-#             y_predict = clf.predict(X_test)
-#             np.savetxt(path_dir + "_NearestNeighbors_labels.csv", y_predict, delimiter=",")
-#             score.append(f1_score(y_predict, y_test, average='macro'))
+            ## K-NN 
+            methods.append('kNN')
+            print(methods[-1], end =', ')
+            clf = KNeighborsClassifier(n_neighbors=10).fit(X_train, y_train)
+            y_predict = clf.predict(X_test)
+            np.savetxt(path_dir + "_NearestNeighbors_labels.csv", y_predict, delimiter=",")
+            score.append(f1_score(y_predict, y_test, average='macro'))
 
-#             # Naive Bayes
-#             methods.append('NaiveBayes')
-#             print(methods[-1], end ='\n')
-#             clf = GaussianNB().fit(X_train, y_train)
-#             y_predict = clf.predict(X_test)
-#             np.savetxt(path_dir + "_NaiveBayes_labels.csv", y_predict, delimiter=",")
-#             score.append(f1_score(y_predict, y_test, average='macro'))
+            # # Naive Bayes
+            # methods.append('NaiveBayes')
+            # print(methods[-1], end ='\n')
+            # clf = GaussianNB().fit(X_train, y_train)
+            # y_predict = clf.predict(X_test)
+            # np.savetxt(path_dir + "_NaiveBayes_labels.csv", y_predict, delimiter=",")
+            # score.append(f1_score(y_predict, y_test, average='macro'))
    
-#             # Xgboost
+            # Xgboost
 #             clf=XGBClassifier(max_depth=3, learning_rate=0.1, n_estimators=500, objective='binary:logistic', booster='gbtree', use_label_encoder=False) #binary
 #             methods.append('Xgboost')
 #             print(methods[-1], end =', ')
@@ -123,20 +126,20 @@ def run_ML(X, y, data_set, approach="Default"):
 #             score.append(f1_score(y_predict, y_test, average='macro'))
             
             # GradientBoostingClassifier
-            methods.append('Gradient Boost Decision Tree')
-            print(methods[-1], end =', ')
-            clf = GradientBoostingClassifier(n_estimators=100, learning_rate=1.0, max_depth=2, random_state=0).fit(X_train, y_train)
-            y_predict = clf.predict(X_test)
-            np.savetxt(path_dir + "_GBDT_labels.csv", y_predict, delimiter=",")
-            score.append(f1_score(y_predict, y_test, average='macro'))
-                  
-            # model = lgb.LGBMClassifier(verbose=-1)
-            # model.fit(X_train, y_train)
-            # methods.append('LightGBM')
+            # methods.append('Gradient Boost Decision Tree')
             # print(methods[-1], end =', ')
-            # y_predict=model.predict(X_test) 
-            # np.savetxt(path_dir + "_LightGBM_labels.csv", y_predict, delimiter=",")
+            # clf = GradientBoostingClassifier(n_estimators=100, learning_rate=1.0, max_depth=2, random_state=0).fit(X_train, y_train)
+            # y_predict = clf.predict(X_test)
+            # np.savetxt(path_dir + "_GBDT_labels.csv", y_predict, delimiter=",")
             # score.append(f1_score(y_predict, y_test, average='macro'))
+                  
+            methods.append('LightGBM')
+            print(methods[-1], end =', ')
+            model = lgb.LGBMClassifier(verbose=-1)
+            model.fit(X_train, y_train)
+            y_predict=model.predict(X_test) 
+            np.savetxt(path_dir + "_LightGBM_labels.csv", y_predict, delimiter=",")
+            score.append(f1_score(y_predict, y_test, average='macro'))
         
     # Print statistics
     n_methods = len(set(methods))
@@ -178,6 +181,18 @@ def count_obfuscated_characters(url):
 
     return num_obfuscated_characters
 
+def ratio_obfuscated_characters(url):
+    # Regular expression pattern to match obfuscated characters
+    obfuscated_pattern = r'%[0-9a-fA-F]{2}|\\x[0-9a-fA-F]{2}'
+
+    # Find all matches of obfuscated patterns in the URL
+    obfuscated_matches = re.findall(obfuscated_pattern, url)
+
+    # Count the number of obfuscated characters
+    num_obfuscated_characters = len(obfuscated_matches)
+
+    return float(num_obfuscated_characters)/float(len(url))
+
 def letter_ratio_in_url(url):
     # Count total characters and letters in the URL
     total_chars = len(url)
@@ -209,6 +224,48 @@ def count_equals_in_url(url):
     num_equals = url.count('=')
     return num_equals
 
+def count_ampersand_in_url(url):
+    # Count the number of '&' characters in the URL
+    num_ampersand = url.count('&')
+    return num_ampersand
+
+# Not necessary
+def char_continuation_rate(url):
+    if len(url) == 0:
+        return 0
+    
+    continuation_count = 0
+    prev_char = url[0]
+    
+    # Count continuation of characters
+    for char in url[1:]:
+        if char == prev_char:
+            continuation_count += 1
+        prev_char = char
+    
+    # Calculate continuation rate
+    continuation_rate = continuation_count / len(url)
+    return continuation_rate
+
+def url_char_prob(url):
+    # Remove non-alphanumeric characters and convert to lowercase
+    cleaned_url = ''.join(char.lower() for char in url if char.isalnum())
+    
+    # Calculate character frequencies
+    char_freq = Counter(cleaned_url)
+    
+    # Calculate total number of characters
+    total_chars = len(cleaned_url)
+    
+    # Calculate character probabilities
+    char_prob = {char: freq / total_chars for char, freq in char_freq.items()}
+    
+    return char_prob
+
+def count_question_marks_in_url(url):
+    # Count the number of '?' characters in the URL
+    num_question_marks = url.count('?')
+    return num_question_marks
 
 def extract_features(url):
     # Parse the URL using urlparse
@@ -250,8 +307,12 @@ def extract_features(url):
         'count_obfuscated_characters': count_obfuscated_characters(url),
         'letter_ratio_in_url': letter_ratio_in_url(url),
         'digit_ratio_in_url': digit_ratio_in_url(url),
-        'count_equals_in_url': count_equals_in_url(url)
-        
+        'count_equals_in_url': count_equals_in_url(url),
+        'NoOfAmpersandInURL': count_ampersand_in_url(url),
+        'CharContinuationRate': char_continuation_rate(url),
+        #'URLCharProb': url_char_prob(url),
+        'ratio_obfuscated_characters': ratio_obfuscated_characters(url),
+        'NoOfQMarkInURL':count_question_marks_in_url(url)
     }
 
     return features
