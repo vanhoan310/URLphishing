@@ -316,3 +316,50 @@ def extract_features(url):
     }
 
     return features
+
+def extract_numerical_features(url):
+    # Parse the URL using urlparse
+    parsed_url = urlparse(url)
+
+    # Extract domain and path components
+    domain = parsed_url.netloc
+    path = parsed_url.path
+
+    # Count number of subdomains
+    subdomains = domain.split('.')
+    num_subdomains = len(subdomains) - 1  # excluding the root domain
+
+    # Check if the URL has an IP address as the domain (indicative of suspicious URLs)
+    contains_ip = bool(re.match(r'\b(?:\d{1,3}\.){3}\d{1,3}\b', domain))
+
+    # Extract other features from path
+    path_length = len(path)
+    num_path_segments = len(path.strip('/').split('/'))
+
+    # Check if URL uses HTTPS (indicative of secure connection)
+    uses_https = 1 if parsed_url.scheme == 'https' else 0
+
+    # Extract file extension (if applicable)
+    file_extension = path.split('.')[-1] if '.' in path else ''
+
+    # Construct feature dictionary
+    features = {
+        'num_subdomains': num_subdomains,
+        'contains_ip': int(contains_ip),
+        'path_length': path_length,
+        'num_path_segments': num_path_segments,
+        'uses_https': uses_https,
+        'count_special_characters': count_special_characters(url),
+        'count_non_alphanumeric_characters': count_non_alphanumeric_characters(url),
+        'count_obfuscated_characters': count_obfuscated_characters(url),
+        'letter_ratio_in_url': letter_ratio_in_url(url),
+        'digit_ratio_in_url': digit_ratio_in_url(url),
+        'count_equals_in_url': count_equals_in_url(url),
+        'NoOfAmpersandInURL': count_ampersand_in_url(url),
+        'CharContinuationRate': char_continuation_rate(url),
+        #'URLCharProb': url_char_prob(url),
+        'ratio_obfuscated_characters': ratio_obfuscated_characters(url),
+        'NoOfQMarkInURL':count_question_marks_in_url(url)
+    }
+
+    return features
