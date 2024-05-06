@@ -33,6 +33,10 @@ import numpy as np
 from collections import Counter
 from itertools import groupby
 
+import requests
+from bs4 import BeautifulSoup
+from requests.exceptions import ConnectionError
+
 def run_ML(X, y, data_set, approach="Default"):
     # X is numpy as
     X = np.array(X)
