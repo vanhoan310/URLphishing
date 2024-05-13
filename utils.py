@@ -376,6 +376,7 @@ import torch.nn.functional as F
 from torch_geometric.nn import GCNConv
 from torch_geometric.nn import global_mean_pool
 
+# Nhan xet: Add arcs in both direction is worse than add arcs from root node to child nodes
 
 class GCN(torch.nn.Module):
     def __init__(self, hidden_channels):
@@ -402,3 +403,40 @@ class GCN(torch.nn.Module):
         x = self.lin(x)
         
         return x
+    
+class GCN2(torch.nn.Module):
+    def __init__(self, hidden_channels):
+        super(GCN, self).__init__()
+        torch.manual_seed(12345)
+        self.conv1 = GCNConv(dataset.num_node_features, hidden_channels)
+        self.conv2 = GCNConv(hidden_channels, hidden_channels)
+        self.conv3 = GCNConv(hidden_channels, hidden_channels)
+        self.lin = Linear(hidden_channels, dataset.num_classes)
+        self.linconcat = Linear(2*hidden_channels, dataset.num_classes)
+
+    def forward(self, x, edge_index, batch):
+        # 1. Obtain node embeddings 
+        x = self.conv1(x, edge_index)
+        x = x.relu()
+        x = self.conv2(x, edge_index)
+        x = x.relu()
+        x = self.conv3(x, edge_index)
+
+        # 2. Readout layer
+        x1 = global_mean_pool(x, batch)  # [batch_size, hidden_channels]
+
+        # 3. Apply a final classifier
+        x1 = F.dropout(x1, p=0.5, training=self.training)
+        
+        y1 = global_max_pool(x, batch)  # [batch_size, hidden_channels]
+        y1 = F.dropout(y1, p=0.5, training=self.training)
+        x = torch.cat((x1, y1), dim=1)
+        x = self.linconcat(x)
+        
+        return x
+    # Directed graph
+# Epoch: 050, Train F1: 0.7585, Test F1: 0.7052
+# Epoch: 060, Train F1: 0.7193, Test F1: 0.6918
+# Epoch: 070, Train F1: 0.7218, Test F1: 0.6667
+# Epoch: 080, Train F1: 0.7477, Test F1: 0.6771
+# Epoch: 090, Train F1: 0.7457, Test F1: 0.6806
