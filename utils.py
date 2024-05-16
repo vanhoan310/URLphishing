@@ -434,9 +434,11 @@ class GCN2(torch.nn.Module):
         x = self.linconcat(x)
         
         return x
-    # Directed graph
-# Epoch: 050, Train F1: 0.7585, Test F1: 0.7052
-# Epoch: 060, Train F1: 0.7193, Test F1: 0.6918
-# Epoch: 070, Train F1: 0.7218, Test F1: 0.6667
-# Epoch: 080, Train F1: 0.7477, Test F1: 0.6771
-# Epoch: 090, Train F1: 0.7457, Test F1: 0.6806
+
+# URLNet prepare input
+# newdf = pd.DataFrame({'label': labels, 'url': smalldata['url']})
+# newdf.iloc[train_idx,:].to_csv('../URLNet/data/dataset_train.csv', header=None, index=None)
+# newdf.iloc[test_idx,:].to_csv('../URLNet/data/dataset_test.csv', header=None, index=None)
+# URLNet results
+# results = pd.read_csv('../URLNet/runs/1000_emb3_dlm0_32dim_minwf1_1conv3456_5ep/train_1000_test_200.txt',sep='\t')
+# print(f1_score(results.iloc[:,0], results.iloc[:,1], average='macro'))
