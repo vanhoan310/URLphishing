@@ -32,6 +32,7 @@ import pandas as pd
 import numpy as np
 from collections import Counter
 from itertools import groupby
+import gensim
 
 import requests
 from bs4 import BeautifulSoup
@@ -442,3 +443,136 @@ class GCN2(torch.nn.Module):
 # URLNet results
 # results = pd.read_csv('../URLNet/runs/1000_emb3_dlm0_32dim_minwf1_1conv3456_5ep/train_1000_test_200.txt',sep='\t')
 # print(f1_score(results.iloc[:,0], results.iloc[:,1], average='macro'))
+
+
+# Phase II: USE HTMLs
+def generate_filename(rec_id):
+    rec_id_str = str(rec_id)
+    return f"{rec_id_str}.html"
+
+def convert(list):
+    return tuple(list)
+
+def read_corpus(fname, tokens_only=False):
+    for i, line in enumerate(fname):
+        tokens = gensim.utils.simple_preprocess(line)
+        if tokens_only:
+            yield tokens
+        else:
+            # For training data, add tags
+            yield gensim.models.doc2vec.TaggedDocument(tokens, [i])
+            
+
+import requests
+from bs4 import BeautifulSoup
+import re
+# import whois
+from urllib.parse import urlparse
+from collections import Counter
+
+# Function to parse HTML content from a URL
+def get_html_content(url):
+    try:
+        response = requests.get(url)
+        response.raise_for_status()  # Raise error if the response is bad
+        return response.text
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching URL {url}: {e}")
+        return None
+
+# Function to extract HTML structure features
+def extract_structure_features(soup):
+    features = {}
+
+    features['num_divs'] = len(soup.find_all('div'))
+    features['num_scripts'] = len(soup.find_all('script'))
+    features['num_forms'] = len(soup.find_all('form'))
+    features['num_links'] = len(soup.find_all('a'))
+    features['num_iframes'] = len(soup.find_all('iframe'))
+
+    # Text to HTML ratio
+    text_length = len(soup.get_text())
+    html_length = len(str(soup))
+    features['text_to_html_ratio'] = text_length / html_length if html_length > 0 else 0
+
+    return features
+
+# Function to extract text-based features
+def extract_text_features(soup):
+    features = {}
+
+    # Keywords in meta tags
+    meta_keywords = soup.find('meta', attrs={'name': 'keywords'})
+    features['meta_keywords'] = meta_keywords['content'] if meta_keywords else ''
+
+    # Title tag content
+    title = soup.title.string if soup.title else ''
+    features['title_length'] = len(title)
+
+    # Visible text length
+    features['visible_text_length'] = len(soup.get_text())
+
+    return features
+
+# Function to extract link-based features
+def extract_link_features(soup, base_url):
+    features = {}
+
+    all_links = soup.find_all('a', href=True)
+    internal_links = [link for link in all_links if urlparse(link['href']).netloc == urlparse(base_url).netloc]
+    external_links = [link for link in all_links if urlparse(link['href']).netloc != urlparse(base_url).netloc]
+
+    features['num_internal_links'] = len(internal_links)
+    features['num_external_links'] = len(external_links)
+
+    return features
+
+# Function to extract JavaScript-based features
+def extract_js_features(soup):
+    features = {}
+
+    script_tags = soup.find_all('script')
+    features['num_js_files'] = len(script_tags)
+
+    # Suspicious JavaScript patterns
+    suspicious_js_patterns = ['eval', 'document.write', 'window.location']
+    features['suspicious_js_count'] = sum(
+        any(p in script.get_text() for p in suspicious_js_patterns) for script in script_tags)
+
+    return features
+
+# Function to extract all features from a URL
+def extract_features(url):
+    html_content = get_html_content(url)
+    if not html_content:
+        return None
+
+    soup = BeautifulSoup(html_content, 'html.parser')
+
+    # Extract all feature sets
+    structure_features = extract_structure_features(soup)
+    text_features = extract_text_features(soup)
+    link_features = extract_link_features(soup, url)
+    js_features = extract_js_features(soup)
+    # domain_features = extract_domain_features(url)
+
+    # Combine all features into a single dictionary
+    features = {**structure_features, **text_features, **link_features, **js_features}
+
+    return features
+
+# Example URLs for feature extraction
+urls = [
+    "https://dantri.com.vn"
+]
+
+# Extract features from each URL
+features_list = []
+for url in urls:
+    features = extract_features(url)
+    if features:
+        features_list.append(features)
+
+# Print extracted features
+for idx, features in enumerate(features_list):
+    print(f"Features for URL {urls[idx]}:\n", features)
